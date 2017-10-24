@@ -1,0 +1,45 @@
+use std::str::FromStr;
+
+grammar;
+
+Comma<T>: Vec<T> = {
+    <h:(<T> ",")*> <t:T?> =>
+        h.into_iter().chain(t).collect()
+};
+
+pub Prog: CProg = <l:(<ProgElem>)*> => {
+    l.into_iter().flat_map(|x| x.to_vec()).collect()
+};
+
+ProgElem: Vec<Box<CProgElem>> = {
+    // variable
+    <l:Type> <r:Comma<Ident>> ";" => {
+        Vec::from(r).into_iter()
+            .map(|id| Box::new(CProgElem::VarDecl(l, id))).collect()
+    },
+
+    // prototype
+    <l:Type> <r:Comma<FuncIdent>> ";" => {
+        Vec::from(r).into_iter().map(|x| match x {
+            (id, ps) => Box::new(CProgElem::FuncProto(l, id, ps))
+        }).collect()
+    },
+};
+
+FuncIdent: (CIdent, Vec<Box<CParam>>) = {
+    <l:Ident> "(" <r:(Param)*> ")" => (l, r)
+};
+
+Param: Box<CParam> = {
+    <l:Type> <r:Ident> => Box::new((l, r))
+};
+
+Ident: String = {
+    r"[a-zA-Z][a-zA-Z0-9_]*" => String::from(<>)
+};
+
+Type: CType = {
+    "int" => CType::Int,
+    "char" => CType::Char,
+    "void" => CType::Void,
+};
